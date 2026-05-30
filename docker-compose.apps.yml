@@ -1,0 +1,452 @@
+# =============================================================
+# Taz.SaaS — Applications Compose
+#
+# Tüm mikroservisler ve Gateway.
+# Altyapı servisleri (postgres, redis vb.) docker-compose.infra.yml'dedir.
+#
+# Network: taz-saas-internal — infra compose tarafından oluşturulur (external)
+#
+# Image tag kontrolü:
+#   IMAGE_TAG=latest         → Gitea Registry'den prod imajı (varsayılan)
+#   IMAGE_TAG=local          → local docker daemon'daki dev imajı
+#
+# Kullanım (prod):
+#   export IMAGE_TAG=latest
+#   docker compose -f docker-compose.apps.yml up -d
+#
+# Kullanım (local dev):
+#   task deploy-local        → imajları build eder, .env.local.apps üretir ve başlatır
+# =============================================================
+name: Taz.SaaS Applications.BE
+
+services:
+  # ─── Vault Service ────────────────────────────────────────
+  vault-service:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/vault:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5001
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Sqlite: ${VAULT_SQLITE_CONNECTION:-Data Source=/app/data/vault.db}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      Auth__Secret: ${AUTH_SECRET}
+      Vault__EncryptionKey: ${VAULT_ENCRYPTIONKEY}
+      Seq__Url: ${SEQ_URL:-http://taz-seq:5341}
+    volumes:
+      - ./.data/vault:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1389 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      taz-saas-internal:
+        aliases:
+          - vault-service
+
+  # ─── API Gateway ──────────────────────────────────────────
+  gateway:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/gateway:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5000
+
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001} 
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+
+      Gateway__VaultUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Gateway__IdentityUrl: ${Identity_URL:-http://identity:5002}
+      Gateway__PaymentUrl: ${Payment_URL:-http://payment:5003}
+      Gateway__ContentUrl: ${Content_URL:-http://content:5004}
+      Gateway__BcmUrl: ${Bcm_URL:-http://bcm:5005}
+      Gateway__AgentUrl: ${Agent_URL:-http://agent:5010}
+      Gateway__LlmGatewayUrl: ${LlmGateway_URL:-http://llmgateway:5011}
+      Gateway__PromptUrl: ${Prompt_URL:-http://prompt:5012}
+      Gateway__KnowledgeUrl: ${Knowledge_URL:-http://knowledge:5013}
+      Gateway__ToolRegistryUrl: ${ToolRegistry_URL:-http://toolregistry:5014}
+      Gateway__ConversationUrl: ${Conversation_URL:-http://conversation:5015}
+      Gateway__AnalyticsUrl: ${Analytics_URL:-http://analytics:5016}
+      Gateway__ConnectorUrl: ${Connector_URL:-http://connector:5017}
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1388 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      identity:
+        condition: service_healthy
+      payment:
+        condition: service_healthy
+      content:
+        condition: service_healthy
+      bcm:
+        condition: service_healthy
+      llmgateway:
+        condition: service_healthy
+      agent:
+        condition: service_healthy
+      prompt:
+        condition: service_healthy
+      knowledge:
+        condition: service_healthy
+      toolregistry:
+        condition: service_healthy
+      conversation:
+        condition: service_healthy
+      analytics:
+        condition: service_healthy
+      vault-service:
+        condition: service_healthy
+    networks:
+      - taz-saas-internal
+      - taz-saas-proxy
+
+  # ─── Identity Service ─────────────────────────────────────
+  identity:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/identity:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5002
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001} 
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :138A /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      vault-service:
+        condition: service_healthy
+    networks:
+      - taz-saas-internal
+
+  # ─── Payment Service ──────────────────────────────────────
+  payment:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/payment:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5003
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001} 
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :138B /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - taz-saas-internal
+
+  # ─── Content Service ──────────────────────────────────────
+  content:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/content:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5004
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :138C /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      vault-service:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+    networks:
+      taz-saas-internal:
+        aliases:
+          - content-service
+
+  # ─── BCM Service ──────────────────────────────────────────
+  bcm:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/bcm:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5005
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :138D /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      taz-saas-internal:
+        aliases:
+          - bcm-service
+
+  # ─── LLM Gateway ──────────────────────────────────────────
+  llmgateway:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.llmgateway:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5011
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1393 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      taz-saas-internal:
+        aliases:
+          - llmgateway-service
+
+  # ─── Prompt Service ───────────────────────────────────────
+  prompt:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.prompt:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5012
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1394 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - llmgateway
+    networks:
+      taz-saas-internal:
+        aliases:
+          - prompt-service
+
+  # ─── Knowledge Service ────────────────────────────────────
+  knowledge:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.knowledge:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5013
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1395 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - llmgateway
+    networks:
+      taz-saas-internal:
+        aliases:
+          - knowledge-service
+
+  # ─── ToolRegistry Service ─────────────────────────────────
+  toolregistry:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.toolregistry:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5014
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    volumes:
+      - ./.data/toolregistry-keys:/app/data-protection-keys
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1396 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      taz-saas-internal:
+        aliases:
+          - toolregistry-service
+
+  # ─── Conversation Service ─────────────────────────────────
+  conversation:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.conversation:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5015
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1397 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - llmgateway
+    networks:
+      taz-saas-internal:
+        aliases:
+          - conversation-service
+
+  # ─── Agent Service ────────────────────────────────────────
+  agent:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.agent:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5010
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1392 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - llmgateway
+      - conversation
+      - toolregistry
+      - prompt
+      - knowledge
+    networks:
+      taz-saas-internal:
+        aliases:
+          - agent-service
+
+  # ─── Connector API ───────────────────────────────────────
+  connector:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.connector:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5017
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1399 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      agent:
+        condition: service_healthy
+      vault-service:
+        condition: service_healthy
+    networks:
+      taz-saas-internal:
+        aliases:
+          - connector-service
+
+  # ─── Connector Worker ────────────────────────────────────
+  connector-worker:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.connector-worker:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    depends_on:
+      connector:
+        condition: service_healthy
+    networks:
+      - taz-saas-internal
+
+  # ─── Analytics Service ────────────────────────────────────
+  analytics:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.analytics:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5016
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :1398 /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      taz-saas-internal:
+        aliases:
+          - analytics-service
+
+networks:
+  taz-saas-internal:
+    name: taz-saas-internal
+    external: true
+  taz-saas-proxy:
+    external: true

@@ -1,0 +1,168 @@
+# =============================================================================
+# Taz.SaaS — Infrastructure Compose
+# =============================================================================
+# Services: PostgreSQL, Redis, RabbitMQ, MinIO, Seq, Chrome (CDP)
+# Networks:
+#   - taz-saas-internal (created here; apps compose uses it as external)
+#   - taz-saas-proxy (external-facing for gateway/minio/seq)
+#
+# Usage:
+#   docker compose -p taz-infra -f docker-compose.infra.yml up -d
+#   OR: task init-infra
+# =============================================================================
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg17
+    env_file:
+      - .env
+      - .env.vault.sync
+    container_name: taz-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-TazSaaS}
+      POSTGRES_MULTIPLE_DATABASES: TazSaaS
+    volumes:
+      - taz-postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d TazSaaS"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - taz-saas-internal
+
+  # ─── Redis ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    env_file:
+      - .env
+      - .env.vault.sync
+    container_name: taz-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy noeviction
+    volumes:
+      - taz-redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - taz-saas-internal
+
+  # ─── RabbitMQ (with delayed plugin) ───────────────────────
+  rabbitmq:
+    image: git.taztech.tr/taz.saas/rabbitmq:3.13-delayed
+    env_file:
+      - .env
+      - .env.vault.sync
+    build:
+      context: .
+      dockerfile: docker/rabbitmq-delayed/Dockerfile
+      args:
+        RABBITMQ_DELAYED_PLUGIN_VERSION: 3.13.0
+    container_name: taz-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ__USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ__PASSWORD:-guest}
+    volumes:
+      - taz-rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - taz-saas-internal
+
+  # ─── MinIO (S3-compatible object storage) ─────────────────
+  minio:
+    image: minio/minio:latest
+    env_file:
+      - .env
+      - .env.vault.sync
+    container_name: taz-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO__ACCESSKEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO__SECRETKEY:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - taz-minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - taz-saas-internal
+      - taz-saas-proxy
+
+  # ─── Seq (Structured Logging) ──────────────────────────────
+  # UI: http://localhost:8081
+  # Ingestion endpoint: http://taz-seq:5341
+  seq:
+    image: datalust/seq:latest
+    env_file:
+      - .env
+      - .env.vault.sync
+    container_name: taz-seq
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
+    volumes:
+      - taz-seq-data:/data
+    ports:
+      - "8081:80"
+      - "5341:5341"
+    networks:
+      taz-saas-internal:
+        aliases:
+          - seq
+          - taz-seq
+      taz-saas-proxy:
+
+  # ─── Headless Chrome (Browser/CDP) ─────────────────────────
+  chrome:
+    image: chromedp/headless-shell:latest
+    env_file:
+      - .env
+      - .env.vault.sync
+    container_name: taz-chrome
+    restart: unless-stopped
+    networks:
+      taz-saas-internal:
+        aliases:
+          - chrome
+
+volumes:
+  taz-postgres-data:
+  taz-redis-data:
+  taz-rabbitmq-data:
+  taz-minio-data:
+  taz-seq-data:
+
+networks:
+  taz-saas-internal:
+    name: taz-saas-internal
+    driver: bridge
+  taz-saas-proxy:
+    name: taz-saas-proxy
+    external: true
