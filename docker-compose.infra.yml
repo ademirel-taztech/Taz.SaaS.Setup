@@ -10,7 +10,6 @@
 #   docker compose -p taz-infra -f docker-compose.infra.yml up -d
 #   OR: task init-infra
 # =============================================================================
-name: Taz.SaaS
 
 services:
   # ─── PostgreSQL ───────────────────────────────────────────
@@ -74,8 +73,8 @@ services:
     container_name: taz-rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-ademirel}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-7442371Ad.}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ__USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ__PASSWORD:-guest}
     volumes:
       - taz-rabbitmq-data:/var/lib/rabbitmq
     ports:
@@ -98,8 +97,8 @@ services:
     container_name: taz-minio
     restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESSKEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRETKEY:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO__ACCESSKEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO__SECRETKEY:-minioadmin}
     command: server /data --console-address ":9001"
     volumes:
       - taz-minio-data:/data

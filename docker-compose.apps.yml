@@ -17,13 +17,12 @@
 # Kullanım (local dev):
 #   task deploy-local        → imajları build eder, .env.local.apps üretir ve başlatır
 # =============================================================
-name: Taz.SaaS
+name: Taz.SaaS Applications.BE
 
 services:
   # ─── Vault Service ────────────────────────────────────────
   vault-service:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/vault:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -53,7 +52,6 @@ services:
   # ─── API Gateway ──────────────────────────────────────────
   gateway:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/gateway:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -119,7 +117,6 @@ services:
   # ─── Identity Service ─────────────────────────────────────
   identity:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/identity:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -145,7 +142,6 @@ services:
   # ─── Payment Service ──────────────────────────────────────
   payment:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/payment:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -168,7 +164,6 @@ services:
   # ─── Content Service ──────────────────────────────────────
   content:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/content:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -198,7 +193,6 @@ services:
   # ─── BCM Service ──────────────────────────────────────────
   bcm:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/bcm:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -223,7 +217,6 @@ services:
   # ─── LLM Gateway ──────────────────────────────────────────
   llmgateway:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.llmgateway:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -248,7 +241,6 @@ services:
   # ─── Prompt Service ───────────────────────────────────────
   prompt:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.prompt:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -275,7 +267,6 @@ services:
   # ─── Knowledge Service ────────────────────────────────────
   knowledge:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.knowledge:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -302,7 +293,6 @@ services:
   # ─── ToolRegistry Service ─────────────────────────────────
   toolregistry:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.toolregistry:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -329,7 +319,6 @@ services:
   # ─── Conversation Service ─────────────────────────────────
   conversation:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.conversation:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -356,7 +345,6 @@ services:
   # ─── Agent Service ────────────────────────────────────────
   agent:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.agent:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -387,7 +375,6 @@ services:
   # ─── Connector API ───────────────────────────────────────
   connector:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.connector:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -417,7 +404,6 @@ services:
   # ─── Connector Worker ────────────────────────────────────
   connector-worker:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.connector-worker:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
@@ -437,7 +423,6 @@ services:
   # ─── Analytics Service ────────────────────────────────────
   analytics:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.analytics:${IMAGE_TAG:-latest}
-    platform: linux/amd64   # ← bunu ekle
     env_file:
       - .env
       - .env.vault.sync
