@@ -90,8 +90,8 @@ services:
         condition: service_healthy
       payment:
         condition: service_healthy
-      content:
-        condition: service_healthy
+#      content:
+#        condition: service_healthy
       bcm:
         condition: service_healthy
       llmgateway:
@@ -162,33 +162,33 @@ services:
       - taz-saas-internal
 
   # ─── Content Service ──────────────────────────────────────
-  content:
-    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/content:${IMAGE_TAG:-latest}
-    env_file:
-      - .env
-      - .env.vault.sync
-    restart: unless-stopped
-    environment:
-      ASPNETCORE_URLS: http://+:5004
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
-      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
-      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
-      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
-    healthcheck:
-      test: ["CMD-SHELL", "grep -q :138C /proc/net/tcp /proc/net/tcp6"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    depends_on:
-      vault-service:
-        condition: service_healthy
-      identity:
-        condition: service_healthy
-    networks:
-      taz-saas-internal:
-        aliases:
-          - content-service
+#  content:
+#    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/content:${IMAGE_TAG:-latest}
+#    env_file:
+#      - .env
+#      - .env.vault.sync
+#    restart: unless-stopped
+#    environment:
+#      ASPNETCORE_URLS: http://+:5004
+#      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+#      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+#      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+#      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+#      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+#    healthcheck:
+#      test: ["CMD-SHELL", "grep -q :138C /proc/net/tcp /proc/net/tcp6"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#    depends_on:
+#      vault-service:
+#        condition: service_healthy
+#      identity:
+#        condition: service_healthy
+#    networks:
+#      taz-saas-internal:
+#        aliases:
+#          - content-service
 
   # ─── BCM Service ──────────────────────────────────────────
   bcm:
@@ -304,6 +304,7 @@ services:
       Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
       Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
       ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      DataProtection__KeysPath: /app/data-protection-keys
     volumes:
       - ./.data/toolregistry-keys:/app/data-protection-keys
     healthcheck:
