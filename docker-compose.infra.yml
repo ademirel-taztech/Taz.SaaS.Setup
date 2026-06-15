@@ -142,16 +142,25 @@ services:
   # ─── Headless Chrome (Browser/CDP) ─────────────────────────
   chrome:
     image: chromedp/headless-shell:latest
-    env_file:
-      - .env
-      - .env.vault.sync
     container_name: taz-chrome
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        /headless-shell/headless-shell \
+          --no-sandbox \
+          --use-gl=angle \
+          --use-angle=swiftshader \
+          --remote-debugging-port=9333 \
+          --headless \
+          --disable-gpu &
+        sleep 2
+        socat TCP-LISTEN:9222,fork,reuseaddr TCP:127.0.0.1:9333
     restart: unless-stopped
     networks:
       taz-saas-internal:
         aliases:
           - chrome
-
 volumes:
   taz-postgres-data:
   taz-redis-data:
