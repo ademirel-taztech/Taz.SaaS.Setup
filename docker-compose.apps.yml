@@ -78,6 +78,7 @@ services:
       Gateway__ConversationUrl: ${Conversation_URL:-http://conversation:5015}
       Gateway__AnalyticsUrl: ${Analytics_URL:-http://analytics:5016}
       Gateway__ConnectorUrl: ${Connector_URL:-http://connector:5017}
+      Gateway__BusinessUrl: ${Business_URL:-http://business:5018}
     ports:
       - "5000:5000"
     healthcheck:
@@ -107,6 +108,8 @@ services:
       conversation:
         condition: service_healthy
       analytics:
+        condition: service_healthy
+      business:
         condition: service_healthy
       vault-service:
         condition: service_healthy
@@ -444,6 +447,33 @@ services:
       taz-saas-internal:
         aliases:
           - analytics-service
+
+  # ─── Business Service ───────────────────────────────────────
+  business:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/business:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5018
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :139A /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      vault-service:
+        condition: service_healthy
+    networks:
+      taz-saas-internal:
+        aliases:
+          - business-service
 
 networks:
   taz-saas-internal:
