@@ -424,6 +424,36 @@ services:
     networks:
       - taz-saas-internal
 
+  # ─── WebScraping Service ──────────────────────────────────
+  webscraping:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.webscraping:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5019
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Services__LLMGateway__BaseUrl: ${LLMGATEWAY_URL:-http://llmgateway:5011}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :139b /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      llmgateway:
+        condition: service_healthy
+      vault-service:
+        condition: service_healthy
+    networks:
+      taz-saas-internal:
+        aliases:
+          - webscraping-service
+
   # ─── Analytics Service ────────────────────────────────────
   analytics:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.analytics:${IMAGE_TAG:-latest}
