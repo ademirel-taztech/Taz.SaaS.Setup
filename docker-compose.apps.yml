@@ -12,10 +12,12 @@
 #
 # Kullanım (prod):
 #   export IMAGE_TAG=latest
-#   docker compose -f docker-compose.apps.yml up -d
+#   docker compose -p taz-apps -f docker-compose.apps.yml up -d
 #
 # Kullanım (local dev):
 #   task deploy-local        → imajları build eder, .env.local.apps üretir ve başlatır
+#
+# ÖNEMLİ: Bu compose dosyasını her zaman `-p taz-apps` ile çalıştır.
 # =============================================================
 name: Taz.SaaS Applications.BE
 
@@ -168,33 +170,33 @@ services:
       - taz-saas-internal
 
   # ─── Content Service ──────────────────────────────────────
-#  content:
-#    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/content:${IMAGE_TAG:-latest}
-#    env_file:
-#      - .env
-#      - .env.vault.sync
-#    restart: unless-stopped
-#    environment:
-#      ASPNETCORE_URLS: http://+:5004
-#      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-#      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
-#      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
-#      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
-#      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
-#    healthcheck:
-#      test: ["CMD-SHELL", "grep -q :138C /proc/net/tcp /proc/net/tcp6"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#    depends_on:
-#      vault-service:
-#        condition: service_healthy
-#      identity:
-#        condition: service_healthy
-#    networks:
-#      taz-saas-internal:
-#        aliases:
-#          - content-service
+  content:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/content:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5004
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q :138C /proc/net/tcp /proc/net/tcp6"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      vault-service:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+    networks:
+      taz-saas-internal:
+        aliases:
+          - content-service
 
   # ─── BCM Service ──────────────────────────────────────────
   bcm:
@@ -234,6 +236,9 @@ services:
       Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
       Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
       ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Services__GuardRail__BaseUrl: ${GUARDRAIL_URL:-http://guardrail:5020}
+      Services__Embedding__BaseUrl: ${EMBEDDING_URL:-http://embedding:5021}
+      Services__Slm__BaseUrl: ${SLM_URL:-http://slm:5022}
     healthcheck:
       test: ["CMD-SHELL", "grep -q :1393 /proc/net/tcp /proc/net/tcp6"]
       interval: 30s
@@ -363,6 +368,9 @@ services:
       Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
       Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
       ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Services__GuardRail__BaseUrl: ${GUARDRAIL_URL:-http://guardrail:5020}
+      Services__Embedding__BaseUrl: ${EMBEDDING_URL:-http://embedding:5021}
+      Services__Slm__BaseUrl: ${SLM_URL:-http://slm:5022}
     healthcheck:
       test: ["CMD-SHELL", "grep -q :1392 /proc/net/tcp /proc/net/tcp6"]
       interval: 30s
@@ -500,6 +508,164 @@ services:
       taz-saas-internal:
         aliases:
           - webscraping-service
+
+  # ─── GuardRail Service ─────────────────────────────────────
+  # Cluster-içi inference servisi; gateway route'u YOKTUR, sadece /internal çağrıları alır.
+  guardrail:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.guardrail:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: src/AI/GuardRail/Taz.AI.GuardRail.API/Dockerfile
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    # Ayarlanabilir limitler:
+    #   GUARDRAIL_CPUS=2
+    #   GUARDRAIL_MEMORY_LIMIT=2g
+    cpus: ${GUARDRAIL_CPUS:-2}
+    mem_limit: ${GUARDRAIL_MEMORY_LIMIT:-2g}
+    environment:
+      ASPNETCORE_URLS: http://+:5020
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      OMP_NUM_THREADS: ${GUARDRAIL_OMP_NUM_THREADS:-2}
+      DOTNET_PROCESSOR_COUNT: ${GUARDRAIL_DOTNET_PROCESSOR_COUNT:-2}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Inference__ModelBasePath: /models/guardrail
+      Inference__ActiveModelVersion: ${GUARDRAIL_MODEL_VERSION:-v1}
+      Inference__MaxConcurrency: ${GUARDRAIL_MAX_CONCURRENCY:-2}
+      Inference__QueueTimeoutMs: ${GUARDRAIL_QUEUE_TIMEOUT_MS:-5000}
+      Inference__IntraOpThreads: ${GUARDRAIL_INTRA_OP_THREADS:-2}
+      Inference__InterOpThreads: ${GUARDRAIL_INTER_OP_THREADS:-1}
+    volumes:
+      - ./models/guardrail:/models/guardrail:ro
+    ports:
+      - "5020:5020"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/5020; printf \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200 OK\" <&3'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      vault-service:
+        condition: service_healthy
+    networks:
+      taz-saas-internal:
+        aliases:
+          - guardrail-service
+
+  # ─── Slm Service ───────────────────────────────────────────
+  # Cluster-içi inference servisi; gateway route'u YOKTUR, sadece /internal çağrıları alır.
+  slm:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.slm:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: src/AI/Slm/Taz.AI.Slm.API/Dockerfile
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    # Ayarlanabilir limitler:
+    #   SLM_CPUS=4
+    #   SLM_MEMORY_LIMIT=4g
+    cpus: ${SLM_CPUS:-4}
+    mem_limit: ${SLM_MEMORY_LIMIT:-4g}
+    environment:
+      ASPNETCORE_URLS: http://+:5022
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      OMP_NUM_THREADS: ${SLM_OMP_NUM_THREADS:-4}
+      DOTNET_PROCESSOR_COUNT: ${SLM_DOTNET_PROCESSOR_COUNT:-4}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Inference__ModelBasePath: /models/slm
+      Inference__ActiveModelVersion: ${SLM_MODEL_VERSION:-v1}
+      Inference__MaxConcurrency: ${SLM_MAX_CONCURRENCY:-4}
+      Inference__QueueTimeoutMs: ${SLM_QUEUE_TIMEOUT_MS:-5000}
+      Inference__IntraOpThreads: ${SLM_INTRA_OP_THREADS:-4}
+      Inference__InterOpThreads: ${SLM_INTER_OP_THREADS:-1}
+      Slm__PromptsBasePath: ${SLM_PROMPTS_BASE_PATH:-Prompts}
+      Slm__Groundedness__MaxTokens: ${SLM_GROUNDEDNESS_MAX_TOKENS:-256}
+      Slm__Citation__MaxTokens: ${SLM_CITATION_MAX_TOKENS:-128}
+      Slm__QueryRewrite__MaxTokens: ${SLM_QUERY_REWRITE_MAX_TOKENS:-256}
+      Slm__Refusal__MaxTokens: ${SLM_REFUSAL_MAX_TOKENS:-64}
+      Slm__QueryRewrite__GenerationTimeoutMs: 25000
+      Slm__Groundedness__GenerationTimeoutMs: 25000
+      Slm__Citation__GenerationTimeoutMs: 10000
+      Slm__Refusal__GenerationTimeoutMs: 10000
+    volumes:
+      - ./models/slm:/models/slm:ro
+    ports:
+      - "5022:5022"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/5022; printf \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200 OK\" <&3'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      vault-service:
+        condition: service_healthy
+    networks:
+      taz-saas-internal:
+        aliases:
+          - slm-service
+
+  # ─── Embedding Service ─────────────────────────────────────
+  # Cluster-içi inference servisi; gateway route'u YOKTUR, sadece /internal çağrıları alır.
+  embedding:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.embedding:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: src/AI/Embedding/Taz.AI.Embedding.API/Dockerfile
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    # Ayarlanabilir limitler:
+    #   EMBEDDING_CPUS=2
+    #   EMBEDDING_MEMORY_LIMIT=3g
+    cpus: ${EMBEDDING_CPUS:-2}
+    mem_limit: ${EMBEDDING_MEMORY_LIMIT:-3g}
+    environment:
+      ASPNETCORE_URLS: http://+:5021
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      OMP_NUM_THREADS: ${EMBEDDING_OMP_NUM_THREADS:-2}
+      DOTNET_PROCESSOR_COUNT: ${EMBEDDING_DOTNET_PROCESSOR_COUNT:-2}
+      Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
+      Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
+      Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
+      ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      Inference__ModelBasePath: /models/embedding
+      Inference__ActiveModelVersion: ${EMBEDDING_MODEL_VERSION:-v1}
+      Inference__MaxConcurrency: ${EMBEDDING_MAX_CONCURRENCY:-2}
+      Inference__QueueTimeoutMs: ${EMBEDDING_QUEUE_TIMEOUT_MS:-5000}
+      Inference__IntraOpThreads: ${EMBEDDING_INTRA_OP_THREADS:-2}
+      Inference__InterOpThreads: ${EMBEDDING_INTER_OP_THREADS:-1}
+      Embedding__OutputDimensions: ${EMBEDDING_OUTPUT_DIMENSIONS:-256}
+      Embedding__MatryoshkaEnabled: ${EMBEDDING_MATRYOSHKA_ENABLED:-true}
+      Embedding__Batching__MaxBatchSize: ${EMBEDDING_BATCH_MAX_SIZE:-16}
+      Embedding__Batching__BatchWindowMs: ${EMBEDDING_BATCH_WINDOW_MS:-8}
+      Embedding__Batching__ChannelCapacity: ${EMBEDDING_BATCH_CHANNEL_CAPACITY:-512}
+    volumes:
+      - ./models/embedding:/models/embedding:ro
+    ports:
+      - "5021:5021"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/5021; printf \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"200 OK\" <&3'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      vault-service:
+        condition: service_healthy
+    networks:
+      taz-saas-internal:
+        aliases:
+          - embedding-service
 
   # ─── Analytics Service ────────────────────────────────────
   analytics:
