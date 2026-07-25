@@ -212,6 +212,10 @@ services:
       Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
       Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
       ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      # QAB-3 fix — BCM's Matrix inheritance-resolution path calls Identity's internal hierarchy
+      # endpoints via the shared "IdentityInternal" HttpClient (AddNonIdentityAuthorization), which
+      # now reads this same key (matching the "workflow" service's identical precedent below).
+      Services__Identity__BaseUrl: ${IDENTITY_URL:-http://identity:5002}
     healthcheck:
       test: ["CMD-SHELL", "grep -q :138D /proc/net/tcp /proc/net/tcp6"]
       interval: 30s
