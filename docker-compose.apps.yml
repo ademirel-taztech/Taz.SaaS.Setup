@@ -82,6 +82,7 @@ services:
       Gateway__ConnectorUrl: ${Connector_URL:-http://connector:5017}
       Gateway__WorkflowUrl: ${Workflow_URL:-http://workflow:5019}
       Gateway__BusinessUrl: ${Business_URL:-http://business:5006}
+      Gateway__SpeechUrl: ${Speech_URL:-http://speech:5023}
     ports:
       - "5000:5000"
     healthcheck:
@@ -115,6 +116,8 @@ services:
       workflow:
         condition: service_healthy
       business:
+        condition: service_healthy
+      speech:
         condition: service_healthy
       vault-service:
         condition: service_healthy
@@ -670,6 +673,45 @@ services:
       taz-saas-internal:
         aliases:
           - embedding-service
+
+  # ─── Speech Service (STT/TTS) ──────────────────────────────
+  # Python/FastAPI (faster-whisper + piper-tts) — .NET DEĞİL. Diğer AI inference
+  # servislerinin (guardrail/embedding/slm) aksine gateway route'u VARDIR
+  # (/api/ai/speech/** — mobil/web istemciler doğrudan kullanır).
+  speech:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.speech:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: src/AI/Speech/Dockerfile
+    env_file:
+      - .env
+      - .env.vault.sync
+    restart: unless-stopped
+    # Ayarlanabilir limitler:
+    #   SPEECH_CPUS=4
+    #   SPEECH_MEMORY_LIMIT=4g
+    cpus: ${SPEECH_CPUS:-4}
+    mem_limit: ${SPEECH_MEMORY_LIMIT:-4g}
+    environment:
+      # WHISPER_MODEL_PATH .env'den geliyor (./models/whisper-small, WORKDIR /app'e göre).
+      # PIPER_MODEL_PATH burada override edilir: piper'ın .onnx.json sidecar dosyası
+      # aynı dizinde olmak zorunda, o yüzden tüm ./models/piper dizini mount edilir.
+      PIPER_MODEL_PATH: /app/models/piper/tr_TR-dfki-medium.onnx
+    volumes:
+      - ./models/whisper-small:/app/models/whisper-small:ro
+      - ./models/piper:/app/models/piper:ro
+    ports:
+      - "5023:5023"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5023/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    networks:
+      taz-saas-internal:
+        aliases:
+          - speech-service
 
   # ─── Analytics Service ────────────────────────────────────
   analytics:

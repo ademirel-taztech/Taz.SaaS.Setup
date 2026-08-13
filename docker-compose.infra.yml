@@ -130,7 +130,7 @@ services:
     volumes:
       - taz-seq-data:/data
     ports:
-      - "8081:80"
+      - "8090:80"
       - "5341:5341"
     networks:
       taz-saas-internal:
