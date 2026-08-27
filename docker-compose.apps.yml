@@ -186,6 +186,8 @@ services:
       Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
       Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
       ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
+      SurveyPlatform__RespondentProtection: ${SURVEY_PLATFORM_RESPONDENT_PROTECTION:-local-dev-respondent-protection-key-32b}
+      SurveyPlatform__EmailHmacKey: ${SURVEY_PLATFORM_EMAIL_HMAC_KEY:-local-dev-email-hmac-key-not-for-prod}
     healthcheck:
       test: ["CMD-SHELL", "grep -q :138C /proc/net/tcp /proc/net/tcp6"]
       interval: 30s
