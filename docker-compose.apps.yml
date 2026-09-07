@@ -221,6 +221,11 @@ services:
       # endpoints via the shared "IdentityInternal" HttpClient (AddNonIdentityAuthorization), which
       # now reads this same key (matching the "workflow" service's identical precedent below).
       Services__Identity__BaseUrl: ${IDENTITY_URL:-http://identity:5002}
+      # BCM Faz 2/3/4 — Content internal client + public /s/{token} origin (FND-CODE-4)
+      Services__Content__BaseUrl: ${CONTENT_URL:-http://content:5004}
+      Services__Gateway__PublicBaseUrl: ${GATEWAY_PUBLIC_BASE_URL:-http://localhost:5000}
+      Bcm__Features__BiaSurveyCampaign: ${BCM_FEATURE_BIA_SURVEY_CAMPAIGN:-false}
+      Bcm__Reminders__ManagerEscalationEnabled: ${BCM_REMINDER_MANAGER_ESCALATION:-false}
     healthcheck:
       test: ["CMD-SHELL", "grep -q :138D /proc/net/tcp /proc/net/tcp6"]
       interval: 30s
