@@ -204,7 +204,7 @@ services:
       SurveyPlatform__EmailHmacKey: ${SURVEY_PLATFORM_EMAIL_HMAC_KEY:-local-dev-email-hmac-key-not-for-prod}
       # OPS run 2026-09-08-0312-adaptive-survey — Content → Agent Adaptive turn (:5010)
       Services__Agent__BaseUrl: ${AGENT_URL:-http://agent:5010}
-      SurveyPlatform__AdaptiveCollection__LiveEnabled: ${SURVEY_PLATFORM_ADAPTIVE_LIVE:-false}
+      SurveyPlatform__AdaptiveCollection__LiveEnabled: ${SURVEY_PLATFORM_ADAPTIVE_LIVE:-true}
       SurveyPlatform__AdaptiveCollection__MaxToolSteps: ${SURVEY_PLATFORM_ADAPTIVE_MAX_STEPS:-64}
     healthcheck:
       test: ["CMD-SHELL", "grep -q :138C /proc/net/tcp /proc/net/tcp6"]
