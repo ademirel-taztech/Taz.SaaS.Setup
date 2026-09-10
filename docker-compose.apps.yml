@@ -146,7 +146,7 @@ services:
       Licensing__Enabled: ${LICENSING_ENABLED:-true}
       Licensing__TrialDays: ${LICENSING_TRIAL_DAYS:-15}
       Licensing__ArchiveDelayDays: ${LICENSING_ARCHIVE_DELAY_DAYS:-15}
-      Licensing__GracePeriodDays: ${LICENSING_GRACE_PERIOD_DAYS:-7}
+      Licensing__GracePeriodDays: ${LICENSING_GRACE_PERIOD_DAYS:-1}
       Licensing__MasterTenantId: ${LICENSING_MASTER_TENANT_ID:-10000000-0000-0000-0000-000000000001}
       Licensing__RestorePath: ${LICENSING_RESTORE_PATH:-/billing/restore}
       Licensing__SnapshotTtlSeconds: ${LICENSING_SNAPSHOT_TTL_SECONDS:-300}
@@ -202,6 +202,10 @@ services:
       ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
       SurveyPlatform__RespondentProtection: ${SURVEY_PLATFORM_RESPONDENT_PROTECTION:-local-dev-respondent-protection-key-32b}
       SurveyPlatform__EmailHmacKey: ${SURVEY_PLATFORM_EMAIL_HMAC_KEY:-local-dev-email-hmac-key-not-for-prod}
+      # OPS run 2026-09-08-0312-adaptive-survey — Content → Agent Adaptive turn (:5010)
+      Services__Agent__BaseUrl: ${AGENT_URL:-http://agent:5010}
+      SurveyPlatform__AdaptiveCollection__LiveEnabled: ${SURVEY_PLATFORM_ADAPTIVE_LIVE:-false}
+      SurveyPlatform__AdaptiveCollection__MaxToolSteps: ${SURVEY_PLATFORM_ADAPTIVE_MAX_STEPS:-64}
     healthcheck:
       test: ["CMD-SHELL", "grep -q :138C /proc/net/tcp /proc/net/tcp6"]
       interval: 30s
@@ -399,6 +403,8 @@ services:
       Services__GuardRail__BaseUrl: ${GUARDRAIL_URL:-http://guardrail:5020}
       Services__Embedding__BaseUrl: ${EMBEDDING_URL:-http://embedding:5021}
       Services__Slm__BaseUrl: ${SLM_URL:-http://slm:5022}
+      # OPS run 2026-09-08-0312-adaptive-survey — Agent Score/Complete → Content :5004
+      Services__Content__BaseUrl: ${CONTENT_URL:-http://content:5004}
     healthcheck:
       test: ["CMD-SHELL", "grep -q :1392 /proc/net/tcp /proc/net/tcp6"]
       interval: 30s
