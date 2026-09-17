@@ -431,7 +431,6 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:5019
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      Workflow__ApprovalTokenSecret: ${WORKFLOW_APPROVAL_TOKEN_SECRET:-TazSaaSWorkflowApprovalSecretChangeMe1234567890!}
       Vault__ServiceUrl: ${VAULT_SERVICE_URL:-http://vault-service:5001}
       Vault__InternalApiKey: ${VAULT_INTERNAL_API_KEY}
       Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
