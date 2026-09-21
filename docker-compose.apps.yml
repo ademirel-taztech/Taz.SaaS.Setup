@@ -348,6 +348,9 @@ services:
       Vault__Environment: ${VAULT_DEFAULT_ENV:-dev}
       ConnectionStrings__Redis: ${REDIS_URL:-host.docker.internal:6379}
       DataProtection__KeysPath: /app/data-protection-keys
+      # OPS run 2026-09-21-1421-ai-gap-036-report-tool — report_generate latest-answers + fillMode=llm
+      Services__Content__BaseUrl: ${CONTENT_URL:-http://content:5004}
+      Services__LLMGateway__BaseUrl: ${LLMGATEWAY_URL:-http://llmgateway:5011}
     volumes:
       - ./.data/toolregistry-keys:/app/data-protection-keys
     healthcheck:
