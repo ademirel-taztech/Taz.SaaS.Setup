@@ -4,7 +4,6 @@
 # Services: PostgreSQL, Redis, RabbitMQ, MinIO, Seq, Chrome (CDP)
 # Networks:
 #   - taz-saas-internal (created here; apps compose uses it as external)
-#   - taz-saas-proxy (external-facing for gateway/minio/seq)
 #
 # Usage:
 #   docker compose -p taz-infra -f docker-compose.infra.yml up -d
@@ -81,7 +80,7 @@ services:
       - "5672:5672"
       - "15672:15672"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_virtual_hosts"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -112,7 +111,6 @@ services:
       retries: 5
     networks:
       - taz-saas-internal
-      - taz-saas-proxy
 
   # ─── Seq (Structured Logging) ──────────────────────────────
   # UI: http://localhost:8081
@@ -137,7 +135,6 @@ services:
         aliases:
           - seq
           - taz-seq
-      taz-saas-proxy:
 
   # ─── Headless Chrome (Browser/CDP) ─────────────────────────
   chrome:
@@ -172,6 +169,3 @@ networks:
   taz-saas-internal:
     name: taz-saas-internal
     driver: bridge
-  taz-saas-proxy:
-    name: taz-saas-proxy
-    external: true
