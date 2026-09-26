@@ -13,7 +13,7 @@
 services:
   # ─── PostgreSQL ───────────────────────────────────────────
   postgres:
-    image: pgvector/pgvector:pg17
+    image: docker.io/pgvector/pgvector:pg17
     env_file:
       - .env
       - .env.vault.sync
@@ -30,7 +30,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d TazSaaS"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -39,7 +39,7 @@ services:
 
   # ─── Redis ────────────────────────────────────────────────
   redis:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     env_file:
       - .env
       - .env.vault.sync
@@ -60,7 +60,7 @@ services:
 
   # ─── RabbitMQ (with delayed plugin) ───────────────────────
   rabbitmq:
-    image: git.taztech.tr/taz.saas/rabbitmq:3.13-delayed
+    image: ghcr.io/ademirel-taztech/rabbitmq:3.13-delayed
     env_file:
       - .env
       - .env.vault.sync
@@ -89,7 +89,7 @@ services:
 
   # ─── MinIO (S3-compatible object storage) ─────────────────
   minio:
-    image: minio/minio:latest
+    image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     env_file:
       - .env
       - .env.vault.sync
@@ -116,7 +116,7 @@ services:
   # UI: http://localhost:8081
   # Ingestion endpoint: http://taz-seq:5341
   seq:
-    image: datalust/seq:latest
+    image: docker.io/datalust/seq:latest
     env_file:
       - .env
       - .env.vault.sync
@@ -138,7 +138,7 @@ services:
 
   # ─── Headless Chrome (Browser/CDP) ─────────────────────────
   chrome:
-    image: chromedp/headless-shell:latest
+    image: docker.io/chromedp/headless-shell:latest
     container_name: taz-chrome
     entrypoint: /bin/sh
     command:

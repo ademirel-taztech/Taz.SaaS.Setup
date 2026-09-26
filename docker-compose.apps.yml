@@ -335,9 +335,6 @@ services:
   # ─── WebScraping Service ──────────────────────────────────
   webscraping:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.webscraping:${IMAGE_TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/AI/WebScraping/Taz.AI.WebScraping.API/Dockerfile
     restart: unless-stopped
     shm_size: "1gb"
     environment:
@@ -363,9 +360,6 @@ services:
   # Cluster-içi inference servisi; gateway route'u YOKTUR, sadece /internal çağrıları alır.
   guardrail:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.guardrail:${IMAGE_TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/AI/GuardRail/Taz.AI.GuardRail.API/Dockerfile
     restart: unless-stopped
     # Ayarlanabilir limitler:
     #   GUARDRAIL_CPUS=2
@@ -395,9 +389,6 @@ services:
   # Cluster-içi inference servisi; gateway route'u YOKTUR, sadece /internal çağrıları alır.
   slm:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.slm:${IMAGE_TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/AI/Slm/Taz.AI.Slm.API/Dockerfile
     restart: unless-stopped
     # Ayarlanabilir limitler:
     #   SLM_CPUS=4
@@ -427,9 +418,6 @@ services:
   # Cluster-içi inference servisi; gateway route'u YOKTUR, sadece /internal çağrıları alır.
   embedding:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.embedding:${IMAGE_TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/AI/Embedding/Taz.AI.Embedding.API/Dockerfile
     restart: unless-stopped
     # Ayarlanabilir limitler:
     #   EMBEDDING_CPUS=2
@@ -461,9 +449,6 @@ services:
   # (/api/ai/speech/** — mobil/web istemciler doğrudan kullanır).
   speech:
     image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/ai.speech:${IMAGE_TAG:-latest}
-    build:
-      context: .
-      dockerfile: src/AI/Speech/Dockerfile
     restart: unless-stopped
     # Ayarlanabilir limitler:
     #   SPEECH_CPUS=4

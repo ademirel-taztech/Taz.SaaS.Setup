@@ -1,68 +1,74 @@
 name: Taz.SaaS
 
 services:
- # web:
- #   image: ${REGISTRY:-ghcr.io}/${NAMESPACE:-ademirel-taztech}/taz-web:${TAG:-latest}
- #   platform: linux/amd64   # ← bunu ekle
- #   restart: unless-stopped
- #   ports:
- #     - "${WEB_PORT:-3000}:3000"
- #   env_file:
- #     - .env
- #   networks:
- #     - taz-saas-proxy
+  web:
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/taz-web:${TAG:-latest}
+    platform: linux/amd64   # ← bunu ekle
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    env_file:
+      - .env
+      - .env.web
+    networks:
+      - taz-saas-internal
 
   app:
-    image: ${REGISTRY:-ghcr.io}/${NAMESPACE:-ademirel-taztech}/taz-app:${TAG:-latest}
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/taz-app:${TAG:-latest}
     platform: linux/amd64   # ← bunu ekle
     restart: unless-stopped
     ports:
       - "${APP_PORT:-3001}:3001"
     env_file:
       - .env
+      - .env.web
     networks:
-      - taz-saas-proxy
+      - taz-saas-internal
   admin:
-    image: ${REGISTRY:-ghcr.io}/${NAMESPACE:-ademirel-taztech}/taz-admin:${TAG:-latest}
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/taz-admin:${TAG:-latest}
     platform: linux/amd64   # ← bunu ekle
     restart: unless-stopped
     ports:
       - "${ADMIN_PORT:-3002}:3002"
     env_file:
       - .env
+      - .env.web
     networks:
-      - taz-saas-proxy
+      - taz-saas-internal
  # landing:
- #   image: ${REGISTRY:-ghcr.io}/${NAMESPACE:-ademirel-taztech}/taz-landing:${TAG:-latest}
+ #   image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/taz-landing:${TAG:-latest}
  #   platform: linux/amd64   # ← bunu ekle
  #   restart: unless-stopped
  #   ports:
  #     - "${LANDING_PORT:-3003}:3003"
  #   env_file:
  #     - .env
+ #     - .env.web
  #   networks:
- #     - taz-saas-proxy
+ #     - taz-saas-internal
   taz-landing:
-    image: ${REGISTRY:-ghcr.io}/${NAMESPACE:-ademirel-taztech}/taz-taz-landing:${TAG:-latest}
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/taz-landing:${TAG:-latest}
     platform: linux/amd64   # ← bunu ekle
     restart: unless-stopped
     ports:
       - "${LANDING_PORT:-3005}:3005"
     env_file:
       - .env
+      - .env.web
     networks:
-      - taz-saas-proxy
+      - taz-saas-internal
   widget:
-    image: ${REGISTRY:-ghcr.io}/${NAMESPACE:-ademirel-taztech}/taz-widget:${TAG:-latest}
+    image: ${NAMESPACE:-ghcr.io/ademirel-taztech}/taz-widget:${TAG:-latest}
     platform: linux/amd64   # ← bunu ekle
     restart: unless-stopped
     ports:
       - "${WIDGET_PORT:-5173}:5173"
     env_file:
       - .env
+      - .env.web
     networks:
-      - taz-saas-proxy
+      - taz-saas-internal
 
 networks:
-  taz-saas-proxy:
+  taz-saas-internal:
     external: true

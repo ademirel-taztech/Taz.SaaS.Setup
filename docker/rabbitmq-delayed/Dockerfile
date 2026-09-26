@@ -1,4 +1,4 @@
-FROM rabbitmq:3.13-management
+FROM docker.io/library/rabbitmq:3.13-management
 
 ARG RABBITMQ_DELAYED_PLUGIN_VERSION=3.13.0
 
